@@ -1,0 +1,30 @@
+name: Native GUI
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: astra918sdr-gui
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.ASTRA_FIRMWARE_REPOSITORY || format('{0}/astra918sdr', github.repository_owner) }}
+          ref: ${{ vars.ASTRA_FIRMWARE_REF || 'main' }}
+          path: astra918sdr
+      - uses: dtolnay/rust-toolchain@1.90.0
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev libxi-dev libxcursor-dev libxrandr-dev libgl1-mesa-dev libwayland-dev libxkbcommon-dev
+      - run: cargo test --locked
+        working-directory: astra918sdr-gui
+      - run: cargo build --locked --release
+        working-directory: astra918sdr-gui
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gui-${{ runner.os }}
+          path: |
+            astra918sdr-gui/target/release/astra918-gui
+            astra918sdr-gui/target/release/astra918-gui.exe

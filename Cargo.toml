@@ -1,0 +1,13 @@
+[package]
+name = "astra918-gui"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+astra918-host = { path = "../astra918sdr/host" }
+astra918-firmware = { path = "../astra918sdr/firmware" }
+eframe = { version = "=0.33.3", features = ["persistence"] }
+egui = "=0.33.3"
+serde = { version = "1", features = ["derive"] }
+clap = { version = "4.5", features = ["derive"] }
