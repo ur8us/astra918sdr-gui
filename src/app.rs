@@ -9,6 +9,14 @@ use astra918_firmware::{
 };
 use egui::{Color32, RichText};
 use serde::{Deserialize, Serialize};
+use std::time::{Duration, Instant};
+
+fn single_receiver(devices: &[astra918_host::Device]) -> Option<&str> {
+    match devices {
+        [device] if !device.serial.is_empty() => Some(&device.serial),
+        _ => None,
+    }
+}
 
 #[derive(Default)]
 pub struct Editor {
@@ -55,17 +63,25 @@ pub struct App {
     offset: Editor,
     low: Editor,
     high: Editor,
-    capacitor: Editor,
+    capacitor: u16,
+    capacitor_readback: Option<u16>,
+    capacitor_active: bool,
+    capacitor_pending: bool,
+    last_capacitor: Option<Instant>,
+    auto_connect_pending: bool,
     content_height: Option<f32>,
     smoke_frames: Option<u32>,
 }
 impl App {
     pub fn new(cc: &eframe::CreationContext<'_>, simulator: Option<String>, smoke: bool) -> Self {
         cc.egui_ctx.set_visuals(egui::Visuals::light());
-        let preferences = cc
+        let mut preferences: Preferences = cc
             .storage
             .and_then(|s| eframe::get_value(s, "astra.preferences"))
             .unwrap_or_default();
+        if !cfg!(debug_assertions) {
+            preferences.simulator = false;
+        }
         let mut app = Self {
             worker: Worker::spawn(),
             snapshot: Snapshot::default(),
@@ -74,7 +90,12 @@ impl App {
             offset: Editor::default(),
             low: Editor::default(),
             high: Editor::default(),
-            capacitor: Editor::default(),
+            capacitor: 0,
+            capacitor_readback: None,
+            capacitor_active: false,
+            capacitor_pending: false,
+            last_capacitor: None,
+            auto_connect_pending: true,
             content_height: None,
             smoke_frames: smoke.then_some(80),
         };
@@ -82,18 +103,28 @@ impl App {
             app.preferences.simulator = true;
             app.preferences.target = address;
             app.connect();
+        } else {
+            app.auto_connect_pending = !app.preferences.simulator;
+            app.request(Request::Discover);
         }
         app
     }
-    fn request(&mut self, request: Request) {
+    fn request(&mut self, request: Request) -> bool {
         if self.worker.requests.try_send(request).is_err() {
             self.snapshot.message = "A command is still pending; try again shortly".into();
+            false
+        } else {
+            true
         }
     }
     fn command(&mut self, cmd: u8, payload: Vec<u8>) {
         self.request(Request::Command(cmd, payload));
     }
     fn connect(&mut self) {
+        self.auto_connect_pending = false;
+        self.capacitor_readback = None;
+        self.capacitor_active = false;
+        self.capacitor_pending = false;
         self.request(Request::Connect {
             simulator: self.preferences.simulator,
             target: if self.preferences.simulator {
@@ -118,7 +149,7 @@ impl App {
     }
     fn controls(&mut self, ui: &mut egui::Ui) {
         let Some(r) = self.snapshot.radio else {
-            ui.label("Connect a receiver or the offline simulator to access its controls.");
+            ui.label("Connect a receiver to access its controls.");
             return;
         };
         let s = r.settings;
@@ -126,8 +157,6 @@ impl App {
         self.offset.readback(i64::from(s.offset));
         self.low.readback(i64::from(s.low));
         self.high.readback(i64::from(s.high));
-        self.capacitor
-            .readback(i64::from(s.controls.lf_mf_capacitor));
         ui.heading("Tuning");
         if let Some(hz) = Self::editor(ui, "Receive frequency (Hz)", &mut self.dial, "Tune") {
             if hz >= 0 {
@@ -238,17 +267,33 @@ impl App {
         if !s.controls.if_auto {
             self.gain(ui, "IF gain", 1, s.controls.if_gain, &IF_GAIN_DB10);
         }
-        if let Some(code) =
-            Self::editor(ui, "LF/MF capacitor (0–4095)", &mut self.capacitor, "Apply")
+        let applied = s.controls.lf_mf_capacitor;
+        if self.capacitor_readback != Some(applied)
+            && !self.capacitor_active
+            && !self.capacitor_pending
         {
-            if (0..=4095).contains(&code) {
-                self.command(
-                    v2::LF_MF_CAPACITOR_SET,
-                    (code as u16).to_le_bytes().to_vec(),
-                );
-            } else {
-                self.snapshot.message = "Capacitor code must be 0–4095".into();
-            }
+            self.capacitor = applied;
+        }
+        self.capacitor_readback = Some(applied);
+        let response = ui.add(
+            egui::Slider::new(&mut self.capacitor, 0..=4095)
+                .clamping(egui::SliderClamping::Always)
+                .text("LF/MF capacitor (0-4095)"),
+        );
+        self.capacitor_pending |= response.changed();
+        self.capacitor_active = response.dragged();
+        if self.capacitor_pending
+            && (!self.capacitor_active
+                || self
+                    .last_capacitor
+                    .is_none_or(|t| t.elapsed() >= Duration::from_millis(100)))
+            && self.request(Request::Command(
+                v2::LF_MF_CAPACITOR_SET,
+                self.capacitor.to_le_bytes().to_vec(),
+            ))
+        {
+            self.capacitor_pending = false;
+            self.last_capacitor = Some(Instant::now());
         }
         ui.small(format!(
             "Applied capacitor: {:.1} pF",
@@ -326,11 +371,19 @@ impl eframe::App for App {
         while let Ok(snapshot) = self.worker.snapshots.try_recv() {
             self.snapshot = snapshot;
         }
+        if self.auto_connect_pending && self.snapshot.discovered {
+            self.auto_connect_pending = false;
+            if let Some(serial) = single_receiver(&self.snapshot.devices) {
+                self.preferences.serial = serial.to_owned();
+                self.connect();
+            }
+        }
         let panel = egui::CentralPanel::default().show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.heading("Astra918 receiver");
                 ui.horizontal(|ui| {
                     ui.add_enabled_ui(!self.snapshot.connected, |ui| {
+                        #[cfg(debug_assertions)]
                         ui.checkbox(&mut self.preferences.simulator, "Offline simulator");
                         if self.preferences.simulator {
                             ui.add(
@@ -415,6 +468,18 @@ impl eframe::App for App {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn automatic_connection_requires_one_identifiable_receiver() {
+        use astra918_host::Device;
+        let device = |serial: &str| Device {
+            serial: serial.into(),
+            label: serial.into(),
+        };
+        assert_eq!(single_receiver(&[]), None);
+        assert_eq!(single_receiver(&[device("")]), None);
+        assert_eq!(single_receiver(&[device("first")]), Some("first"));
+        assert_eq!(single_receiver(&[device("first"), device("second")]), None);
+    }
     #[test]
     fn polling_preserves_dirty_frequency_draft() {
         let mut e = Editor::default();

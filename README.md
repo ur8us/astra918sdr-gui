@@ -16,7 +16,7 @@ architecture; its serial protocol is not used. MIT license.
 cargo test --locked
 cargo build --locked --release
 # Start ../astra918sdr/target/release/astra918-sim in another terminal:
-target/release/astra918-gui --simulator 127.0.0.1:7350
+cargo run --locked -- --simulator 127.0.0.1:7350
 ```
 
 Build prerequisites: Rust/rustup (pinned 1.90.0), a native C toolchain and normal
@@ -33,12 +33,21 @@ in the implementation workspace. `--smoke-test` opens the UI, exercises the
 worker and closes after approximately eight seconds; check its connection
 report in stderr.
 
-To connect hardware, clear **Offline simulator**, click **Refresh**,
-choose a serial and **Connect**. Connecting adopts receiver settings. Editing
+Release builds show only physical receivers; simulator UI and the `--simulator`
+option are available in debug builds. At startup the GUI discovers receivers
+and connects automatically when exactly one identifiable receiver is present,
+even if a different serial was selected previously. With zero or multiple
+receivers, use **Refresh**, select a serial and **Connect**. Disconnect stays
+disconnected until requested; startup discovery is not a reconnect loop.
+Connecting adopts receiver settings. Editing
 a frequency keeps its draft intact during polling; the applied dial/center
 remain visible. Ordinary tuning preserves offset; changing offset preserves
 dial. Use **Save to receiver** explicitly to persist all settings. Preferences
 store only connection selection, never a stale receiver configuration.
+
+The capacitor slider clamps both dragging and numeric entry to 0-4095. Changes
+apply during dragging, at most ten times per second, and the final value is sent
+on release. There is no Apply button. Only **Save to receiver** writes flash.
 
 Disconnect SDR++ before connecting this GUI: both own the same vendor interface.
 WSJT-X continues using CAT and USB audio independently. Closing this GUI releases
@@ -49,8 +58,9 @@ Linux hardware checks on September 24 verified state adoption, bidirectional
 WSJT-X tuning, offset semantics, antenna/gain-mode changes, USB/LSB and explicit
 Save. The light window fits both automatic and manual LF controls and shrinks
 on disconnect. See the [hardware record](../astra918sdr/docs/HARDWARE-2026-09-24.md).
-The updated Windows GUI also builds and connects to the simulator under Wine;
-native Windows/macOS hardware checks are still pending.
+The current Windows GUI cross-builds and its release CLI was checked under Wine.
+Simulator connection checks now use the debug GUI. Native Windows/macOS hardware
+checks are still pending. See also the [control update tests](../astra918sdr/docs/CONTROLS-2026-09-24.md).
 
 The GitHub workflow expects a sibling GitHub repository named `astra918sdr`
 under the same owner. Override repository variable `ASTRA_FIRMWARE_REPOSITORY`

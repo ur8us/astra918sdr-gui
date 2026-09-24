@@ -13,6 +13,7 @@ pub enum Request {
 #[derive(Clone, Default)]
 pub struct Snapshot {
     pub devices: Vec<Device>,
+    pub discovered: bool,
     pub radio: Option<Receiver>,
     pub message: String,
     pub connected: bool,
@@ -31,10 +32,13 @@ impl Worker {
             let mut poll = Instant::now();
             loop {
                 match rx.recv_timeout(Duration::from_millis(20)) {
-                    Ok(Request::Discover) => match astra918_host::devices() {
-                        Ok(d) => state.devices = d,
-                        Err(e) => state.message = e.to_string(),
-                    },
+                    Ok(Request::Discover) => {
+                        match astra918_host::devices() {
+                            Ok(d) => state.devices = d,
+                            Err(e) => state.message = e.to_string(),
+                        }
+                        state.discovered = true;
+                    }
                     Ok(Request::Disconnect) => {
                         client = None;
                         state.radio = None;
@@ -45,7 +49,7 @@ impl Worker {
                         client = None;
                         state.radio = None;
                         state.connected = false;
-                        let result = if simulator {
+                        let result = if simulator && cfg!(debug_assertions) {
                             Client::tcp(&target)
                         } else {
                             Client::usb(&target)
