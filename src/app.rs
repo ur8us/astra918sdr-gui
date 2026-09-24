@@ -56,7 +56,7 @@ pub struct App {
     low: Editor,
     high: Editor,
     capacitor: Editor,
-    first_layout: bool,
+    content_height: Option<f32>,
     smoke_frames: Option<u32>,
 }
 impl App {
@@ -75,7 +75,7 @@ impl App {
             low: Editor::default(),
             high: Editor::default(),
             capacitor: Editor::default(),
-            first_layout: true,
+            content_height: None,
             smoke_frames: smoke.then_some(80),
         };
         if let Some(address) = simulator {
@@ -379,15 +379,24 @@ impl eframe::App for App {
                 self.controls(ui);
             })
         });
-        if self.first_layout && self.snapshot.connected {
-            let height = (panel.inner.content_size.y + 24.).clamp(480., 950.);
-            let available =
-                ctx.input(|i| i.viewport().monitor_size.unwrap_or(egui::vec2(1280., 900.)));
+        let content_height = panel.inner.content_size.y;
+        if self
+            .content_height
+            .is_none_or(|last| (last - content_height).abs() > 1.)
+        {
+            let height = (content_height + 24.).clamp(180., 950.);
+            let (available, width) = ctx.input(|i| {
+                let viewport = i.viewport();
+                (
+                    viewport.monitor_size.unwrap_or(egui::vec2(1280., 900.)),
+                    viewport.inner_rect.map_or(660., |r| r.width()),
+                )
+            });
             ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(
-                660.,
+                width,
                 height.min(available.y - 80.),
             )));
-            self.first_layout = false;
+            self.content_height = Some(content_height);
         }
         if let Some(left) = &mut self.smoke_frames {
             *left = left.saturating_sub(1);

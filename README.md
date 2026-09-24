@@ -4,8 +4,9 @@ Rust/egui light-theme receiver controls for Linux, Windows and macOS. The GUI
 controls the same authoritative state as WSJT-X CAT: dial, channel offset,
 USB/LSB audio mode and passband, antenna route, automatic/manual gains,
 LF/MF capacitor, Save and Retry, with health counters. It has no spectrum or
-waterfall. USB I/O runs on a worker thread; window height follows its contents,
-and a scroll area handles smaller displays.
+waterfall. USB I/O runs on a worker thread; window height follows its contents
+when connecting, disconnecting or exposing manual gains. The disconnected
+window is compact, and a scroll area handles smaller displays.
 
 Keep `astra918sdr` next to this repository: `Cargo.toml` uses its shared host
 transport and state codecs. The reference `drm1000-gui` supplied the worker/UI
@@ -32,7 +33,7 @@ in the implementation workspace. `--smoke-test` opens the UI, exercises the
 worker and closes after approximately eight seconds; check its connection
 report in stderr.
 
-To connect hardware later, clear **Offline simulator**, click **Refresh**,
+To connect hardware, clear **Offline simulator**, click **Refresh**,
 choose a serial and **Connect**. Connecting adopts receiver settings. Editing
 a frequency keeps its draft intact during polling; the applied dial/center
 remain visible. Ordinary tuning preserves offset; changing offset preserves
@@ -43,6 +44,13 @@ Disconnect SDR++ before connecting this GUI: both own the same vendor interface.
 WSJT-X continues using CAT and USB audio independently. Closing this GUI releases
 only the vendor interface. See [receiver setup](../astra918sdr/README.md) and
 [validation](../astra918sdr/docs/VALIDATION.md).
+
+Linux hardware checks on September 24 verified state adoption, bidirectional
+WSJT-X tuning, offset semantics, antenna/gain-mode changes, USB/LSB and explicit
+Save. The light window fits both automatic and manual LF controls and shrinks
+on disconnect. See the [hardware record](../astra918sdr/docs/HARDWARE-2026-09-24.md).
+The updated Windows GUI also builds and connects to the simulator under Wine;
+native Windows/macOS hardware checks are still pending.
 
 The GitHub workflow expects a sibling GitHub repository named `astra918sdr`
 under the same owner. Override repository variable `ASTRA_FIRMWARE_REPOSITORY`
