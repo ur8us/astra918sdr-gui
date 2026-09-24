@@ -59,7 +59,7 @@ pub struct App {
     worker: Worker,
     snapshot: Snapshot,
     preferences: Preferences,
-    dial: Editor,
+    center: Editor,
     offset: Editor,
     low: Editor,
     high: Editor,
@@ -86,7 +86,7 @@ impl App {
             worker: Worker::spawn(),
             snapshot: Snapshot::default(),
             preferences,
-            dial: Editor::default(),
+            center: Editor::default(),
             offset: Editor::default(),
             low: Editor::default(),
             high: Editor::default(),
@@ -153,33 +153,44 @@ impl App {
             return;
         };
         let s = r.settings;
-        self.dial.readback(s.dial as i64);
+        self.center.readback(s.center());
         self.offset.readback(i64::from(s.offset));
         self.low.readback(i64::from(s.low));
         self.high.readback(i64::from(s.high));
         ui.heading("Tuning");
-        if let Some(hz) = Self::editor(ui, "Receive frequency (Hz)", &mut self.dial, "Tune") {
-            if hz >= 0 {
-                self.command(v2::FREQUENCY_SET, (hz as u64).to_le_bytes().to_vec());
+        if let Some(hz) = Self::editor(ui, "Spectrum center (Hz)", &mut self.center, "Tune") {
+            let dial = hz.checked_add(i64::from(s.offset));
+            if (70_000..=130_000_000).contains(&hz)
+                && let Some(dial) = dial.filter(|v| (70_000..=130_000_000).contains(v))
+            {
+                self.command(v2::FREQUENCY_SET, (dial as u64).to_le_bytes().to_vec());
             } else {
-                self.snapshot.message = "Frequency must be positive".into();
+                self.snapshot.message =
+                    "Spectrum center or firmware audio frequency is out of range".into();
             }
         }
-        if let Some(hz) = Self::editor(ui, "Channel offset (Hz)", &mut self.offset, "Apply") {
-            if let Ok(hz) = i32::try_from(hz) {
-                self.command(a::OFFSET, hz.to_le_bytes().to_vec());
+        ui.label(format!(
+            "Firmware USB audio / CAT: {:.6} MHz   Spectrum center: {:.6} MHz",
+            s.dial as f64 / 1e6,
+            s.center() as f64 / 1e6
+        ));
+        ui.separator();
+        ui.heading("USB audio for WSJT-X");
+        if let Some(hz) = Self::editor(
+            ui,
+            "Firmware USB audio offset (Hz)",
+            &mut self.offset,
+            "Apply",
+        ) {
+            let dial = s.center().checked_add(hz);
+            if i32::try_from(hz).is_ok()
+                && let Some(dial) = dial.filter(|v| (70_000..=130_000_000).contains(v))
+            {
+                self.command(a::CHANNEL_TUNE, (dial as u64).to_le_bytes().to_vec());
             } else {
                 self.snapshot.message = "Offset is out of range".into();
             }
         }
-        ui.label(format!(
-            "Applied dial: {:.6} MHz   Spectrum center: {:.6} MHz",
-            s.dial as f64 / 1e6,
-            s.center() as f64 / 1e6
-        ));
-        ui.small("Tuning keeps the offset. Changing the offset keeps the receive frequency.");
-        ui.separator();
-        ui.heading("USB audio for WSJT-X");
         ui.horizontal(|ui| {
             ui.label("Mode");
             for (label, mode) in [("USB", Mode::Usb), ("LSB", Mode::Lsb)] {

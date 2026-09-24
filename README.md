@@ -1,7 +1,7 @@
 # Astra918 controller
 
 Rust/egui light-theme receiver controls for Linux, Windows and macOS. The GUI
-controls the same authoritative state as WSJT-X CAT: dial, channel offset,
+controls the same authoritative state as WSJT-X CAT: spectrum center, firmware audio offset,
 USB/LSB audio mode and passband, antenna route, automatic/manual gains,
 LF/MF capacitor, Save and Retry, with health counters. It has no spectrum or
 waterfall. USB I/O runs on a worker thread; window height follows its contents
@@ -41,8 +41,11 @@ receivers, use **Refresh**, select a serial and **Connect**. Disconnect stays
 disconnected until requested; startup discovery is not a reconnect loop.
 Connecting adopts receiver settings. Editing
 a frequency keeps its draft intact during polling; the applied dial/center
-remain visible. Ordinary tuning preserves offset; changing offset preserves
-dial. Use **Save to receiver** explicitly to persist all settings. Preferences
+remain visible. **Spectrum center (Hz)** tunes the RF center while preserving
+the firmware audio offset. **Firmware USB audio offset (Hz)** moves the audio
+channel and CAT dial while keeping that center fixed. The firmware audio/CAT
+frequency is always center plus offset. CAT retuning preserves offset and moves
+the center. Use **Save to receiver** explicitly to persist all settings. Preferences
 store only connection selection, never a stale receiver configuration.
 
 The capacitor slider clamps both dragging and numeric entry to 0-4095. Changes
@@ -61,6 +64,9 @@ on disconnect. See the [hardware record](../astra918sdr/docs/HARDWARE-2026-09-24
 The current Windows GUI cross-builds and its release CLI was checked under Wine.
 Simulator connection checks now use the debug GUI. Native Windows/macOS hardware
 checks are still pending. See also the [control update tests](../astra918sdr/docs/CONTROLS-2026-09-24.md).
+
+The subsequent center/firmware-audio-offset UI correction was compiled on Linux
+only. No runtime or hardware tests were run for that correction, as requested.
 
 The GitHub workflow expects a sibling GitHub repository named `astra918sdr`
 under the same owner. Override repository variable `ASTRA_FIRMWARE_REPOSITORY`
