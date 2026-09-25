@@ -33,7 +33,10 @@ in the implementation workspace. `--smoke-test` opens the UI, exercises the
 worker and closes after approximately eight seconds; check its connection
 report in stderr.
 
-Release builds show only physical receivers; simulator UI and the `--simulator`
+Release builds show a reachable Astra918 SDR Console bridge as a receiver, or
+physical receivers when no bridge is available. The bridge owns USB vendor
+interface 4 and accepts the GUI's control connection at `127.0.0.1:30433`;
+this lets SDR Console and the GUI run concurrently. Simulator UI and the `--simulator`
 option are available in debug builds. At startup the GUI discovers receivers
 and connects automatically when exactly one identifiable receiver is present,
 even if a different serial was selected previously. With zero or multiple
@@ -52,7 +55,9 @@ The capacitor slider clamps both dragging and numeric entry to 0-4095. Changes
 apply during dragging, at most ten times per second, and the final value is sent
 on release. There is no Apply button. Only **Save to receiver** writes flash.
 
-Disconnect SDR++ before connecting this GUI: both own the same vendor interface.
+Disconnect SDR++ before connecting this GUI directly by USB: both own the same
+vendor interface. When the SDR Console bridge is running, the GUI automatically
+uses its proxy instead of claiming USB.
 WSJT-X continues using CAT and USB audio independently. Closing this GUI releases
 only the vendor interface. See [receiver setup](../astra918sdr/README.md) and
 [validation](../astra918sdr/docs/VALIDATION.md).

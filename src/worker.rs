@@ -33,9 +33,20 @@ impl Worker {
             loop {
                 match rx.recv_timeout(Duration::from_millis(20)) {
                     Ok(Request::Discover) => {
-                        match astra918_host::devices() {
-                            Ok(d) => state.devices = d,
-                            Err(e) => state.message = e.to_string(),
+                        // The bridge owns vendor interface 4 while SDR Console runs.
+                        // Prefer its AST1 proxy over a second, conflicting USB claim.
+                        let bridge =
+                            Client::tcp("127.0.0.1:30433").and_then(|mut client| client.state());
+                        if bridge.is_ok() {
+                            state.devices = vec![Device {
+                                serial: "bridge".into(),
+                                label: "Astra918 via SDR Console bridge".into(),
+                            }];
+                        } else {
+                            match astra918_host::devices() {
+                                Ok(d) => state.devices = d,
+                                Err(e) => state.message = e.to_string(),
+                            }
                         }
                         state.discovered = true;
                     }
@@ -49,7 +60,9 @@ impl Worker {
                         client = None;
                         state.radio = None;
                         state.connected = false;
-                        let result = if simulator && cfg!(debug_assertions) {
+                        let result = if target == "bridge" {
+                            Client::tcp("127.0.0.1:30433")
+                        } else if simulator && cfg!(debug_assertions) {
                             Client::tcp(&target)
                         } else {
                             Client::usb(&target)
