@@ -260,7 +260,7 @@ impl App {
             });
         }
         if self.snapshot.features & 0x80 != 0 {
-            ui.label("Logical GPIO (pins unassigned)");
+            ui.label("Logical GPIO");
             for row in 0..2 {
                 ui.horizontal(|ui| {
                     for col in 0..4 {
