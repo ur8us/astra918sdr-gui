@@ -7,7 +7,15 @@ license = "MIT"
 [dependencies]
 astra918-host = { path = "../astra918sdr/host" }
 astra918-firmware = { path = "../astra918sdr/firmware" }
-eframe = { version = "=0.33.3", features = ["persistence"] }
 egui = "=0.33.3"
 serde = { version = "1", features = ["derive"] }
 clap = { version = "4.5", features = ["derive"] }
+
+[target.'cfg(windows)'.dependencies]
+# WGL's OpenGL ES extension is absent on some Windows drivers. Use wgpu's
+# native Windows graphics backends instead of the glutin/Glow renderer.
+eframe = { version = "=0.33.3", default-features = false, features = ["accesskit", "default_fonts", "persistence", "wgpu"] }
+wgpu = { version = "=27.0.1", default-features = false, features = ["dx12", "vulkan", "gles", "wgsl"] }
+
+[target.'cfg(not(windows))'.dependencies]
+eframe = { version = "=0.33.3", features = ["persistence"] }

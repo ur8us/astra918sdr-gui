@@ -26,7 +26,9 @@ platform graphics support. Linux needs development headers for X11/Wayland,
 OpenGL and xkbcommon; Ubuntu packages include `build-essential pkg-config
 libx11-dev libxi-dev libxcursor-dev libxrandr-dev libgl1-mesa-dev
 libwayland-dev libxkbcommon-dev`. Windows supports the MSVC or GNU Rust target;
-install the matching compiler. macOS needs Xcode command-line tools. libusb is
+install the matching compiler. The Windows build uses wgpu with DirectX 12,
+Vulkan and GLES backends, avoiding the WGL context requirement of Glow.
+macOS needs Xcode command-line tools. libusb is
 built from the vendored source. Native macOS execution remains unverified.
 
 The release executable is in `target/release/` (`.exe` on Windows). A Windows
