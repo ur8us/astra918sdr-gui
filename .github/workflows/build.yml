@@ -3,6 +3,7 @@ on: [push, pull_request, workflow_dispatch]
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
@@ -22,9 +23,13 @@ jobs:
         working-directory: astra918sdr-gui
       - run: cargo build --locked --release
         working-directory: astra918sdr-gui
+      - name: Package Unix executable
+        if: runner.os != 'Windows'
+        run: tar -czf astra918sdr-gui/target/release/astra918-gui-${{ runner.os }}-${{ runner.arch }}.tar.gz -C astra918sdr-gui/target/release astra918-gui
       - uses: actions/upload-artifact@v4
         with:
-          name: gui-${{ runner.os }}
+          name: astra918-gui-${{ runner.os }}-${{ runner.arch }}
           path: |
-            astra918sdr-gui/target/release/astra918-gui
+            astra918sdr-gui/target/release/astra918-gui-${{ runner.os }}-${{ runner.arch }}.tar.gz
             astra918sdr-gui/target/release/astra918-gui.exe
+          if-no-files-found: error

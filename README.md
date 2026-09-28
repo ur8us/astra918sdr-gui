@@ -61,21 +61,23 @@ Disconnect SDR++ before connecting this GUI directly by USB: both own the same
 vendor interface. When the SDR Console bridge is running, the GUI automatically
 uses its proxy instead of claiming USB.
 WSJT-X continues using CAT and USB audio independently. Closing this GUI releases
-only the vendor interface. See [receiver setup](../astra918sdr/README.md) and
-[validation](../astra918sdr/docs/VALIDATION.md).
+only the vendor interface. See the [receiver setup](https://github.com/ur8us/astra918sdr).
 
 Linux hardware checks on September 24 verified state adoption, bidirectional
 WSJT-X tuning, offset semantics, antenna/gain-mode changes, USB/LSB and explicit
 Save. The light window fits both automatic and manual LF controls and shrinks
-on disconnect. See the [hardware record](../astra918sdr/docs/HARDWARE-2026-09-24.md).
+on disconnect.
 The current Windows GUI cross-builds and its release CLI was checked under Wine.
 Simulator connection checks now use the debug GUI. Native Windows/macOS hardware
-checks are still pending. See also the [control update tests](../astra918sdr/docs/CONTROLS-2026-09-24.md).
+checks are still pending.
 
 The subsequent center/firmware-audio-offset UI correction was compiled on Linux
 only. No runtime or hardware tests were run for that correction, as requested.
 
-The GitHub workflow expects a sibling GitHub repository named `astra918sdr`
-under the same owner. Override repository variable `ASTRA_FIRMWARE_REPOSITORY`
-and `ASTRA_FIRMWARE_REF` if published differently. These workflows are provided
-but have not run on a remote service in this local-only milestone.
+Every push builds native Linux, Windows and macOS executables in the **Native GUI**
+GitHub Actions workflow. Download the artifact for your operating system from
+a successful run. Windows contains `astra918-gui.exe`; Linux and macOS contain a
+`.tar.gz` archive that preserves the executable permission. The workflow checks
+out the `astra918sdr` repository beside this one for shared code. Override
+`ASTRA_FIRMWARE_REPOSITORY` and `ASTRA_FIRMWARE_REF` repository variables if the
+firmware repository is published elsewhere.
