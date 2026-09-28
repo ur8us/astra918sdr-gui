@@ -68,6 +68,11 @@ pub struct App {
     capacitor_active: bool,
     capacitor_pending: bool,
     last_capacitor: Option<Instant>,
+    gain_draft: [u8; 4],
+    gain_readback: [Option<u8>; 4],
+    gain_active: [bool; 4],
+    gain_pending: [bool; 4],
+    last_gain: [Option<Instant>; 4],
     auto_connect_pending: bool,
     content_height: Option<f32>,
     smoke_frames: Option<u32>,
@@ -95,6 +100,11 @@ impl App {
             capacitor_active: false,
             capacitor_pending: false,
             last_capacitor: None,
+            gain_draft: [0; 4],
+            gain_readback: [None; 4],
+            gain_active: [false; 4],
+            gain_pending: [false; 4],
+            last_gain: [None; 4],
             auto_connect_pending: true,
             content_height: None,
             smoke_frames: smoke.then_some(80),
@@ -125,6 +135,9 @@ impl App {
         self.capacitor_readback = None;
         self.capacitor_active = false;
         self.capacitor_pending = false;
+        self.gain_readback = [None; 4];
+        self.gain_active = [false; 4];
+        self.gain_pending = [false; 4];
         self.request(Request::Connect {
             simulator: self.preferences.simulator,
             target: if self.preferences.simulator {
@@ -160,8 +173,8 @@ impl App {
         ui.heading("Tuning");
         if let Some(hz) = Self::editor(ui, "Spectrum center (Hz)", &mut self.center, "Tune") {
             let dial = hz.checked_add(i64::from(s.offset));
-            if (70_000..=130_000_000).contains(&hz)
-                && let Some(dial) = dial.filter(|v| (70_000..=130_000_000).contains(v))
+            if (70_000..=170_000_000).contains(&hz)
+                && let Some(dial) = dial.filter(|v| (70_000..=170_000_000).contains(v))
             {
                 self.command(v2::FREQUENCY_SET, (dial as u64).to_le_bytes().to_vec());
             } else {
@@ -184,7 +197,7 @@ impl App {
         ) {
             let dial = s.center().checked_add(hz);
             if i32::try_from(hz).is_ok()
-                && let Some(dial) = dial.filter(|v| (70_000..=130_000_000).contains(v))
+                && let Some(dial) = dial.filter(|v| (70_000..=170_000_000).contains(v))
             {
                 self.command(a::CHANNEL_TUNE, (dial as u64).to_le_bytes().to_vec());
             } else {
@@ -230,6 +243,40 @@ impl App {
         ));
         ui.separator();
         ui.heading("Receiver");
+        if self.snapshot.features & 0x40 != 0 {
+            ui.horizontal(|ui| {
+                ui.label("38.4 MHz reference");
+                for (label, reference) in [
+                    ("Internal", a::ReferenceClock::Internal),
+                    ("External", a::ReferenceClock::External),
+                ] {
+                    if ui
+                        .selectable_label(s.reference == reference, label)
+                        .clicked()
+                    {
+                        self.command(a::REFERENCE_SET, vec![reference as u8]);
+                    }
+                }
+            });
+        }
+        if self.snapshot.features & 0x80 != 0 {
+            ui.label("Logical GPIO (pins unassigned)");
+            for row in 0..2 {
+                ui.horizontal(|ui| {
+                    for col in 0..4 {
+                        let index = row * 4 + col;
+                        let mask = 1u8 << index;
+                        let mut enabled = s.gpio & mask != 0;
+                        if ui.checkbox(&mut enabled, format!("GPIO{index}")).changed() {
+                            self.command(
+                                a::GPIO_UPDATE,
+                                vec![mask, if enabled { mask } else { 0 }],
+                            );
+                        }
+                    }
+                });
+            }
+        }
         ui.horizontal(|ui| {
             ui.label("Antenna input");
             for (index, label) in ["Auto", "LF", "HF", "VHF"].iter().enumerate() {
@@ -351,27 +398,35 @@ impl App {
         ));
     }
     fn gain(&mut self, ui: &mut egui::Ui, label: &str, block: u8, code: u8, table: &[i16]) {
+        let i = block as usize;
+        if self.gain_readback[i] != Some(code) && !self.gain_active[i] && !self.gain_pending[i] {
+            self.gain_draft[i] = code;
+        }
+        self.gain_readback[i] = Some(code);
         ui.horizontal(|ui| {
             ui.label(label);
-            egui::ComboBox::from_id_salt(("gain", block))
-                .selected_text(format!(
-                    "{:.1} dB (code {code})",
-                    f32::from(table[code as usize]) / 10.
-                ))
-                .show_ui(ui, |ui| {
-                    for (value, db) in table.iter().enumerate() {
-                        if ui
-                            .selectable_label(
-                                value == code as usize,
-                                format!("{:.1} dB (code {value})", f32::from(*db) / 10.),
-                            )
-                            .clicked()
-                        {
-                            self.command(v2::GAIN_SET, vec![block, value as u8]);
-                        }
-                    }
-                });
+            let response = ui.add(
+                egui::Slider::new(&mut self.gain_draft[i], 0..=(table.len() - 1) as u8)
+                    .clamping(egui::SliderClamping::Always),
+            );
+            self.gain_pending[i] |= response.changed();
+            self.gain_active[i] = response.dragged();
+            ui.label(format!(
+                "{:.1} dB",
+                f32::from(table[self.gain_draft[i] as usize]) / 10.
+            ));
         });
+        if self.gain_pending[i]
+            && (!self.gain_active[i]
+                || self.last_gain[i].is_none_or(|t| t.elapsed() >= Duration::from_millis(100)))
+            && self.request(Request::Command(
+                v2::GAIN_SET,
+                vec![block, self.gain_draft[i]],
+            ))
+        {
+            self.gain_pending[i] = false;
+            self.last_gain[i] = Some(Instant::now());
+        }
     }
 }
 impl eframe::App for App {

@@ -3,7 +3,9 @@
 Rust/egui light-theme receiver controls for Linux, Windows and macOS. The GUI
 controls the same authoritative state as WSJT-X CAT: spectrum center, firmware audio offset,
 USB/LSB audio mode and passband, antenna route, automatic/manual gains,
-LF/MF capacitor, Save and Retry, with health counters. It has no spectrum or
+LF/MF capacitor, 38.4 MHz internal/external reference, eight logical GPIO
+values, Save and Retry, with health counters. Gain and attenuation controls
+use sliders. It has no spectrum or
 waterfall. USB I/O runs on a worker thread; window height follows its contents
 when connecting, disconnecting or exposing manual gains. The disconnected
 window is compact, and a scroll area handles smaller displays.

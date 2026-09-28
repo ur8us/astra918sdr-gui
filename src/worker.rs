@@ -17,6 +17,7 @@ pub struct Snapshot {
     pub radio: Option<Receiver>,
     pub message: String,
     pub connected: bool,
+    pub features: u8,
 }
 pub struct Worker {
     pub requests: SyncSender<Request>,
@@ -54,6 +55,7 @@ impl Worker {
                         client = None;
                         state.radio = None;
                         state.connected = false;
+                        state.features = 0;
                         state.message = "Disconnected".into();
                     }
                     Ok(Request::Connect { simulator, target }) => {
@@ -69,11 +71,17 @@ impl Worker {
                         };
                         match result.and_then(|mut c| {
                             let s = c.state()?;
-                            Ok((c, s))
+                            let features = c
+                                .command(0x13, &[])
+                                .ok()
+                                .filter(|p| p.len() == 128)
+                                .map_or(0, |p| p[120]);
+                            Ok((c, s, features))
                         }) {
-                            Ok((c, s)) => {
+                            Ok((c, s, features)) => {
                                 client = Some(c);
                                 state.radio = Some(s);
+                                state.features = features;
                                 state.connected = true;
                                 state.message = "Connected; receiver settings adopted".into();
                             }
@@ -106,6 +114,7 @@ impl Worker {
                             Err(e) => {
                                 state.message = format!("Disconnected: {e:#}");
                                 state.connected = false;
+                                state.features = 0;
                                 state.radio = None;
                                 client = None;
                             }
