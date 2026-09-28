@@ -173,8 +173,8 @@ impl App {
         ui.heading("Tuning");
         if let Some(hz) = Self::editor(ui, "Spectrum center (Hz)", &mut self.center, "Tune") {
             let dial = hz.checked_add(i64::from(s.offset));
-            if (70_000..=170_000_000).contains(&hz)
-                && let Some(dial) = dial.filter(|v| (70_000..=170_000_000).contains(v))
+            if (70_000..=260_000_000).contains(&hz)
+                && let Some(dial) = dial.filter(|v| (70_000..=260_000_000).contains(v))
             {
                 self.command(v2::FREQUENCY_SET, (dial as u64).to_le_bytes().to_vec());
             } else {
@@ -197,7 +197,7 @@ impl App {
         ) {
             let dial = s.center().checked_add(hz);
             if i32::try_from(hz).is_ok()
-                && let Some(dial) = dial.filter(|v| (70_000..=170_000_000).contains(v))
+                && let Some(dial) = dial.filter(|v| (70_000..=260_000_000).contains(v))
             {
                 self.command(a::CHANNEL_TUNE, (dial as u64).to_le_bytes().to_vec());
             } else {
