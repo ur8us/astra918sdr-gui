@@ -74,11 +74,13 @@ checks are still pending.
 The subsequent center/firmware-audio-offset UI correction was compiled on Linux
 only. No runtime or hardware tests were run for that correction, as requested.
 
-Every push to `main` builds native Linux, Windows and macOS executables in the
+Every push to `main` builds Linux, Windows and macOS executables in the
 **Native GUI** GitHub Actions workflow and publishes them under
 [Releases](https://github.com/ur8us/astra918sdr-gui/releases). Each release is
-tagged with the source commit. Download the Windows `.exe`, Linux x64 `.tar.gz`,
-or macOS ARM64 `.tar.gz`; the archives preserve executable permissions. The
-workflow checks out the `astra918sdr` repository beside this one for shared
-code. Override `ASTRA_FIRMWARE_REPOSITORY` and `ASTRA_FIRMWARE_REF` repository
-variables if the firmware repository is published elsewhere.
+tagged with the source commit. Download the Windows x64 `.exe`, universal
+macOS (Intel and Apple Silicon) `.dmg`, or Linux x64, ARM64 or RISC-V 64
+`.tar.gz` or `.AppImage`. The Linux builds use Ubuntu 24.04 and need a
+compatible glibc and graphics stack; AppImages include libudev and libcap.
+The workflow checks out the `astra918sdr` repository beside this one for
+shared code. Override `ASTRA_FIRMWARE_REPOSITORY` and `ASTRA_FIRMWARE_REF`
+repository variables if the firmware repository is published elsewhere.

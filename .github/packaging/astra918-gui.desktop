@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Astra918 GUI
+Exec=astra918-gui
+Icon=astra918-gui
+Categories=HamRadio;Utility;
+Terminal=false
