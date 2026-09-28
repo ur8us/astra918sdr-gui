@@ -27,7 +27,9 @@ OpenGL and xkbcommon; Ubuntu packages include `build-essential pkg-config
 libx11-dev libxi-dev libxcursor-dev libxrandr-dev libgl1-mesa-dev
 libwayland-dev libxkbcommon-dev`. Windows supports the MSVC or GNU Rust target;
 install the matching compiler. The Windows build uses wgpu with DirectX 12,
-Vulkan and GLES backends, avoiding the WGL context requirement of Glow.
+Vulkan and GLES backends, avoiding the WGL context requirement of Glow. When
+the Windows executable runs under Wine, it prefers Vulkan; `WGPU_BACKEND`
+still overrides that choice.
 macOS needs Xcode command-line tools. libusb is
 built from the vendored source. Native macOS execution remains unverified.
 

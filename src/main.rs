@@ -23,6 +23,17 @@ fn main() -> eframe::Result {
         renderer: eframe::Renderer::Wgpu,
         ..Default::default()
     };
+    #[cfg(windows)]
+    let mut options = options;
+    #[cfg(windows)]
+    if std::env::var_os("WINELOADER").is_some() && std::env::var_os("WGPU_BACKEND").is_none() {
+        // Wine may expose a DirectX adapter that fails device creation.
+        // Prefer its Vulkan path, retaining GLES for systems without Vulkan.
+        if let eframe::egui_wgpu::WgpuSetup::CreateNew(setup) = &mut options.wgpu_options.wgpu_setup
+        {
+            setup.instance_descriptor.backends = wgpu::Backends::VULKAN | wgpu::Backends::GL;
+        }
+    }
     eframe::run_native(
         "Astra918",
         options,
