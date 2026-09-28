@@ -44,7 +44,7 @@ printf '%s  %s\n' "$tool_sha" "$tool" | sha256sum -c -
 chmod +x "$tool"
 if [[ "$runtime_arch" == riscv64 ]]; then
   # mkdwarfs runs on the x64 host; the embedded runtime is RISC-V.
-  mkdwarfs="$repo_dir/target/mkdwarfs-x86_64"
+  mkdwarfs="$repo_dir/target/mkdwarfs"
   curl -fsSL --retry 3 \
     https://github.com/mhx/dwarfs/releases/download/v0.15.6/dwarfs-universal-0.15.6-Linux-x86_64 \
     -o "$mkdwarfs"
