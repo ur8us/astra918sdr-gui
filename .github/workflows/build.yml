@@ -1,5 +1,7 @@
 name: Native GUI
 on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
 jobs:
   build:
     strategy:
@@ -33,3 +35,37 @@ jobs:
             astra918sdr-gui/target/release/astra918-gui-${{ runner.os }}-${{ runner.arch }}.tar.gz
             astra918sdr-gui/target/release/astra918-gui.exe
           if-no-files-found: error
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: astra918-gui-*
+          path: release-assets
+          merge-multiple: true
+      - name: Publish binaries to Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mv release-assets/astra918-gui.exe release-assets/astra918-gui-Windows-X64.exe
+          test -s release-assets/astra918-gui-Windows-X64.exe
+          test -s release-assets/astra918-gui-Linux-X64.tar.gz
+          test -s release-assets/astra918-gui-macOS-ARM64.tar.gz
+          tag="build-$GITHUB_SHA"
+          assets=(release-assets/astra918-gui-Windows-X64.exe
+                  release-assets/astra918-gui-Linux-X64.tar.gz
+                  release-assets/astra918-gui-macOS-ARM64.tar.gz)
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$tag" "${assets[@]}" --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$tag" "${assets[@]}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "Astra918 GUI build ${GITHUB_SHA:0:12}" \
+              --notes "Windows x64, Linux x64, and macOS ARM64 GUI binaries built from commit $GITHUB_SHA." \
+              --latest
+          fi
