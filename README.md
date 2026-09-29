@@ -10,6 +10,12 @@ waterfall. USB I/O runs on a worker thread; window height follows its contents
 when connecting, disconnecting or exposing manual gains. The disconnected
 window is compact, and a scroll area handles smaller displays.
 
+The [Astra918 firmware repository](https://github.com/ur8us/astra918sdr) has
+the receiver firmware and shared host protocol. Hardware and software
+connections are discussed in the [EEVblog forum thread](https://www.eevblog.com/forum/rf-microwave/astra918-cmx918rp2350-based-receiver-0-07-to-130-mhz/).
+
+![Astra918 controller GUI](images/gui-screenshot.png)
+
 Keep `astra918sdr` next to this repository: `Cargo.toml` uses its shared host
 transport and state codecs. The reference `drm1000-gui` supplied the worker/UI
 architecture; its serial protocol is not used. MIT license.
