@@ -243,6 +243,35 @@ impl App {
         ));
         ui.separator();
         ui.heading("Receiver");
+        if self.snapshot.features & 0x20 != 0 {
+            ui.horizontal(|ui| {
+                ui.label("VFO sign");
+                for (label, sign) in [
+                    ("Auto", a::VfoSign::Auto),
+                    ("LO above the signal", a::VfoSign::LoAbove),
+                    ("LO below the signal", a::VfoSign::LoBelow),
+                ] {
+                    if ui.selectable_label(s.vfo_sign == sign, label).clicked() {
+                        self.command(a::VFO_SIGN_SET, vec![sign as u8]);
+                    }
+                }
+            });
+            ui.horizontal(|ui| {
+                ui.label("IF frequency");
+                for (label, frequency) in [
+                    ("Auto", a::IfFrequency::Auto),
+                    ("96 kHz", a::IfFrequency::Khz96),
+                    ("120 kHz", a::IfFrequency::Khz120),
+                ] {
+                    if ui
+                        .selectable_label(s.if_frequency == frequency, label)
+                        .clicked()
+                    {
+                        self.command(a::IF_FREQUENCY_SET, vec![frequency as u8]);
+                    }
+                }
+            });
+        }
         if self.snapshot.features & 0x40 != 0 {
             ui.horizontal(|ui| {
                 ui.label("38.4 MHz reference");

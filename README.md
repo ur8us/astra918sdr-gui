@@ -3,7 +3,8 @@
 Rust/egui light-theme receiver controls for Linux, Windows and macOS. The GUI
 controls the same authoritative state as WSJT-X CAT: spectrum center, firmware audio offset,
 USB/LSB audio mode and passband, antenna route, automatic/manual gains,
-LF/MF capacitor, 38.4 MHz internal/external reference, eight logical GPIO
+LF/MF capacitor, VFO sign (Auto/LO above/LO below), IF frequency
+(Auto/96 kHz/120 kHz), 38.4 MHz internal/external reference, eight logical GPIO
 values, Save and Retry, with health counters. Gain and attenuation controls
 use sliders. It has no spectrum or
 waterfall. USB I/O runs on a worker thread; window height follows its contents
@@ -77,6 +78,9 @@ Linux hardware checks on September 24 verified state adoption, bidirectional
 WSJT-X tuning, offset semantics, antenna/gain-mode changes, USB/LSB and explicit
 Save. The light window fits both automatic and manual LF controls and shrinks
 on disconnect.
+VFO sign and IF frequency apply immediately while retaining the spectrum center,
+CAT dial and firmware audio offset. Auto uses 96 kHz IF and the receiver's
+frequency-dependent LO sign. Only **Save to receiver** persists these choices.
 The current Windows GUI cross-builds and its release CLI was checked under Wine.
 Simulator connection checks now use the debug GUI. Native Windows/macOS hardware
 checks are still pending.
